@@ -28,18 +28,18 @@ resources:
         - file:
             path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Gold.py
     
-  finance_contractor_pipeline:
-      name: finance_contractor_pipeline
+  finance_corporation_pipeline:
+      name: finance_corporation_pipeline
       catalog: ${var.catalog}
       serverless: true
       continuous: false
       libraries:
         - file:
-            path: ./uc2_finance_contractor/finance_contractor_pipeline/transformations/Bronze.py
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Bronze.py
         - file:
-            path: ./uc2_finance_contractor/finance_contractor_pipeline/transformations/Silver.py
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Silver.py
         - file:
-            path: ./uc2_finance_contractor/finance_contractor_pipeline/transformations/Gold.py
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Gold.py
 
   jobs:
     governance_setup_job:
