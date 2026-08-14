@@ -1,0 +1,76 @@
+bundle:
+  name: mwua-capstone-team3
+
+# resources:
+#   pipelines:
+#     usecase1_billing_pipeline:
+#       name: usecase1_billing_pipeline
+#       catalog: ${var.catalog}
+#       serverless: true
+#       continuous: false
+#       libraries:
+#         - file:
+#             path: ./usecase1_billing/usecase1_billing_pipeline.py
+
+resources:
+  pipelines:
+    billing_customer_pipeline:
+      name: billing_customer_pipeline
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Bronze.py
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Silver.py
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Gold.py
+    
+  finance_corporation_pipeline:
+      name: finance_corporation_pipeline
+      catalog: ${var.catalog}
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Bronze.py
+        - file:
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Silver.py
+        - file:
+            path: ./uc2_finance_corporation/finance_corporation_pipeline/transformations/Gold.py
+
+  jobs:
+    governance_setup_job:
+      name: governance_setup_job
+      tasks:
+        - task_key: apply_governance
+          sql_task:
+            file:
+              path: ./governance_setup.sql
+            warehouse_id: 1c774ae413eb3427
+
+variables:
+  catalog:
+    default: mwua_capstone_team3
+  schema:
+    default: default
+
+targets:
+  dev:
+    default: true
+    mode: development
+    variables:
+      catalog: mwua_capstone_team3
+      schema: default
+    workspace:
+      host: https://dbc-d8b9acd9-b19b.cloud.databricks.com
+
+  prod:
+    mode: production
+    variables:
+      catalog: mwua_team3_prod
+      schema: default
+    workspace:
+      host: https://dbc-d8b9acd9-b19b.cloud.databricks.com/
