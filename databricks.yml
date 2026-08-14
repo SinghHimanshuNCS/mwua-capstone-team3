@@ -1,0 +1,59 @@
+bundle:
+  name: mwua-capstone-team3
+
+# resources:
+#   pipelines:
+#     usecase1_billing_pipeline:
+#       name: usecase1_billing_pipeline
+#       catalog: ${var.catalog}
+#       serverless: true
+#       continuous: false
+#       libraries:
+#         - file:
+#             path: ./usecase1_billing/usecase1_billing_pipeline.py
+
+resources:
+  pipelines:
+    billing_customer_pipeline:
+      name: billing_customer_pipeline
+      catalog: ${var.catalog}
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Bronze.py
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Silver.py
+        - file:
+            path: ./uc1_billing_operations/billing_customer_pipeline/transformations/Gold.py
+
+variables:
+  catalog:
+    default: mwua_capstone_team3
+
+targets:
+  dev:
+    default: true
+    mode: development
+    variables:
+      catalog: mwua_capstone_team3
+    workspace:
+      host: https://dbc-d8b9acd9-b19b.cloud.databricks.com
+
+  prod:
+    mode: production
+    variables:
+      catalog: mwua_team3_prod
+    workspace:
+      host: https://dbc-d8b9acd9-b19b.cloud.databricks.com/
+
+resources:
+  jobs:
+    governance_setup_job:
+      name: governance_setup_job
+      tasks:
+        - task_key: apply_governance
+          sql_task:
+            file:
+              path: ./uc1_billing_operations/governance_setup.sql
+            warehouse_id: <apna SQL warehouse ID>
