@@ -52,6 +52,24 @@ COMMENT ON TABLE silver_mwua.reject_billing_transaction IS
 COMMENT ON TABLE gold_mwua.fct_consumption_billing IS
   'Zone x billing_period consumption and billing summary. suspect_reading_count flags negative consumption.';
 
-
-  -- For testing
+-- For testing
 GRANT SELECT ON TABLE mwua_capstone_team3.silver_mwua.pii_customer TO `MWUA PII Data Reader`;
+
+-- For Usecase 2
+
+GRANT SELECT ON TABLE mwua_capstone_team3.silver_mwua.reject_invoice TO `MWUA Data Engineers`;
+GRANT SELECT ON TABLE mwua_capstone_team3.silver_mwua.reject_contractor_workorder TO `MWUA Data Engineers`;
+
+COMMENT ON TABLE silver_mwua.invoice_header IS
+  'Invoice header, one row per invoice_id. currency_is_inferred flags rows where currency was defaulted.';
+COMMENT ON TABLE silver_mwua.dim_vendor IS
+  'Vendor reference table, safe direct extract from ERP.';
+COMMENT ON TABLE silver_mwua.contractor_workorder IS
+  'Reconciled work orders across 3 contractors, config-driven mapping.';
+COMMENT ON TABLE gold_mwua.fct_spend IS
+  'Zone x project x contractor spend summary, combining ERP invoices and contractor work orders.';
+
+
+
+
+
