@@ -1,0 +1,1505 @@
+{
+  "datasets": [
+    {
+      "name": "01479efe",
+      "displayName": "fct_consumption_billing",
+      "config": {
+        "version": "1.1",
+        "source": "mwua_capstone_team3.gold_mwua.fct_consumption_billing",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "comment": "Represents the total number of rows in the dataset. Use this measure to count all",
+            "displayName": "Count"
+          }
+        ]
+      }
+    },
+    {
+      "name": "0f85f213",
+      "displayName": "fct_spend",
+      "config": {
+        "version": "1.1",
+        "source": "mwua_capstone_team3.gold_mwua.fct_spend",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "comment": "Represents the total number of rows in the dataset. Use this measure to count all",
+            "displayName": "Count"
+          }
+        ]
+      }
+    },
+    {
+      "name": "0c375e43",
+      "displayName": "fct_network_health",
+      "config": {
+        "version": "1.1",
+        "source": "mwua_capstone_team3.gold_mwua.fct_network_health",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "comment": "Represents the total number of rows in the dataset. Use this measure to count all",
+            "displayName": "Count"
+          }
+        ]
+      }
+    },
+    {
+      "name": "f19191aa",
+      "displayName": "rpt_zone_360",
+      "config": {
+        "version": "1.1",
+        "source": "mwua_capstone_team3.gold_mwua.rpt_zone_360",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "comment": "Represents the total number of rows in the dataset. Use this measure to count all",
+            "displayName": "Count"
+          }
+        ]
+      }
+    },
+    {
+      "name": "consumption_trend_unfiltered",
+      "displayName": "fct_consumption_billing (unfiltered trend)",
+      "config": {
+        "version": "1.1",
+        "source": "mwua_capstone_team3.gold_mwua.fct_consumption_billing",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "292e9db1",
+      "displayName": "ds_spend_by_zone",
+      "queryLines": [
+        "WITH erp_dedup AS (\r\n",
+        "  SELECT DISTINCT zone, project_code, erp_spend FROM mwua_capstone_team3.gold_mwua.fct_spend\r\n",
+        "),\r\n",
+        "contractor_dedup AS (\r\n",
+        "  SELECT DISTINCT zone, contractor_id, contractor_spend FROM mwua_capstone_team3.gold_mwua.fct_spend\r\n",
+        "),\r\n",
+        "zones AS (SELECT DISTINCT zone FROM mwua_capstone_team3.gold_mwua.fct_spend)\r\n",
+        "SELECT\r\n",
+        "  z.zone,\r\n",
+        "  COALESCE(e.total_erp_spend, 0) AS total_erp_spend,\r\n",
+        "  COALESCE(c.total_contractor_spend, 0) AS total_contractor_spend,\r\n",
+        "  COALESCE(e.total_erp_spend, 0) + COALESCE(c.total_contractor_spend, 0) AS total_spend\r\n",
+        "FROM zones z\r\n",
+        "LEFT JOIN (SELECT zone, SUM(erp_spend) AS total_erp_spend FROM erp_dedup GROUP BY zone) e ON z.zone = e.zone\r\n",
+        "LEFT JOIN (SELECT zone, SUM(contractor_spend) AS total_contractor_spend FROM contractor_dedup GROUP BY zone) c ON z.zone = c.zone"
+      ],
+      "catalog": "mwua_capstone_team3",
+      "schema": "default"
+    },
+    {
+      "name": "12011ab9",
+      "displayName": "ds_spend_by_project",
+      "queryLines": [
+        "SELECT DISTINCT\n",
+        "  project_code,\n",
+        "  erp_spend\n",
+        "FROM\n",
+        "  mwua_capstone_team3.gold_mwua.fct_spend\n",
+        "WHERE\n",
+        "  project_code IS NOT NULL"
+      ],
+      "catalog": "mwua_capstone_team3",
+      "schema": "default"
+    },
+    {
+      "name": "b2a5f3b7",
+      "displayName": "ds_contractor_activity",
+      "queryLines": [
+        "SELECT DISTINCT\n",
+        "  contractor_id,\n",
+        "  contractor_spend,\n",
+        "  workorder_count\n",
+        "FROM\n",
+        "  mwua_capstone_team3.gold_mwua.fct_spend"
+      ],
+      "catalog": "mwua_capstone_team3",
+      "schema": "default"
+    },
+    {
+      "name": "6fe1b859",
+      "displayName": "ds_reliability_by_zone",
+      "queryLines": [
+        "SELECT   zone,   reading_type,   SUM(reading_count) AS total_readings,   SUM(suspect_count) AS total_suspect,   SUM(zone_mismatch_count) AS total_mismatch,   1 - (SUM(suspect_count) + SUM(zone_mismatch_count)) / SUM(reading_count) AS reliability_pct FROM mwua_capstone_team3.gold_mwua.fct_network_health GROUP BY zone, reading_type"
+      ],
+      "catalog": "mwua_capstone_team3",
+      "schema": "default"
+    },
+    {
+      "name": "1db9826f",
+      "displayName": "ds_unreliable_readings",
+      "queryLines": [
+        "SELECT zone, reading_date, reading_type, \r\n",
+        "       avg_reading_value, reliability_pct, \r\n",
+        "       suspect_count, zone_mismatch_count\r\n",
+        "FROM mwua_capstone_team3.gold_mwua.fct_network_health\r\n",
+        "WHERE reliability_pct < 0.9\r\n",
+        "ORDER BY reliability_pct ASC"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "a9e1613c",
+      "displayName": "Consumption and Billing",
+      "layout": [
+        {
+          "widget": {
+            "name": "bi",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b105231f2795c06d266977cd9a_billing_period",
+                "query": {
+                  "datasetName": "01479efe",
+                  "fields": [
+                    {
+                      "name": "billing_period",
+                      "expression": "`billing_period`"
+                    },
+                    {
+                      "name": "billing_period_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "disallowAll": false,
+              "scale": {
+                "type": "categorical",
+                "sort": {
+                  "by": "custom-order",
+                  "orderedValues": [
+                    "2026-01",
+                    "2026-02",
+                    "2026-03",
+                    "2026-04",
+                    "2026-05",
+                    "2026-06"
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "BILLING PERIOD",
+                "showDescription": false
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "billing_period",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b105231f2795c06d266977cd9a_billing_period"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "service-zone",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b105231f2795c06d266977cd9a_service_zone",
+                "query": {
+                  "datasetName": "01479efe",
+                  "fields": [
+                    {
+                      "name": "service_zone",
+                      "expression": "`service_zone`"
+                    },
+                    {
+                      "name": "service_zone_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "SERVICE ZONE"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "service_zone",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b105231f2795c06d266977cd9a_service_zone"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "consumption-billing",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01479efe",
+                  "fields": [
+                    {
+                      "name": "service_zone",
+                      "expression": "`service_zone`"
+                    },
+                    {
+                      "name": "sum(total_consumption_m3)",
+                      "expression": "SUM(`total_consumption_m3`)"
+                    },
+                    {
+                      "name": "sum(total_billed)",
+                      "expression": "SUM(`total_billed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Consumption and Billing"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "service_zone",
+                  "displayName": "Zone",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Zone A - Bukit Timah",
+                        "Zone B - Tampines",
+                        "Zone C - Jurong",
+                        "Zone D - Woodlands",
+                        "Zone E - Punggol",
+                        "Zone F - Pasir Ris"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(total_consumption_m3)",
+                      "displayName": "Total Consumption"
+                    },
+                    {
+                      "fieldName": "sum(total_billed)",
+                      "displayName": "Total Billing"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "overdue-accounts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "01479efe",
+                  "fields": [
+                    {
+                      "name": "service_zone",
+                      "expression": "`service_zone`"
+                    },
+                    {
+                      "name": "sum(overdue_accounts)",
+                      "expression": "SUM(`overdue_accounts`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Overdue Accounts by Zone"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "service_zone",
+                  "displayName": "Zone",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Zone A - Bukit Timah",
+                        "Zone B - Tampines",
+                        "Zone C - Jurong",
+                        "Zone D - Woodlands",
+                        "Zone E - Punggol",
+                        "Zone F - Pasir Ris"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(overdue_accounts)",
+                  "displayName": "Total Overdue Accounts",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "con1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "consumption_trend_unfiltered",
+                  "fields": [
+                    {
+                      "name": "service_zone",
+                      "expression": "`service_zone`"
+                    },
+                    {
+                      "name": "billing_period",
+                      "expression": "`billing_period`"
+                    },
+                    {
+                      "name": "sum(total_consumption_m3)",
+                      "expression": "SUM(`total_consumption_m3`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Consumption Trend Over Time"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "billing_period",
+                  "displayName": "Billing Period",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_consumption_m3)",
+                  "displayName": "Total Consumption",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "service_zone",
+                  "displayName": "Zone",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "026325f0",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "e32422c9",
+      "displayName": "Spend and Contractors",
+      "layout": [
+        {
+          "widget": {
+            "name": "zone",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198c67b4819ab9f9a9ec3831c24d6_zone",
+                "query": {
+                  "datasetName": "292e9db1",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "zone_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "ZONE"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "zone",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198c67b4819ab9f9a9ec3831c24d6_zone"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "project-code",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198c6953c1d7ca947fd7f46bd8917_project_code",
+                "query": {
+                  "datasetName": "12011ab9",
+                  "fields": [
+                    {
+                      "name": "project_code",
+                      "expression": "`project_code`"
+                    },
+                    {
+                      "name": "project_code_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "PROJECT CODE"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "project_code",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198c6953c1d7ca947fd7f46bd8917_project_code"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total-spend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "292e9db1",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "sum(total_erp_spend)",
+                      "expression": "SUM(`total_erp_spend`)"
+                    },
+                    {
+                      "name": "sum(total_contractor_spend)",
+                      "expression": "SUM(`total_contractor_spend`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Spend by Zone"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "zone",
+                  "displayName": "Zone",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(total_erp_spend)",
+                      "displayName": "Total ERP Spend"
+                    },
+                    {
+                      "fieldName": "sum(total_contractor_spend)",
+                      "displayName": "Total Contractor Spend"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "contractor",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "b2a5f3b7",
+                  "fields": [
+                    {
+                      "name": "contractor_id",
+                      "expression": "`contractor_id`"
+                    },
+                    {
+                      "name": "sum(workorder_count)",
+                      "expression": "SUM(`workorder_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Contractor Activity (Work Orders)"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "contractor_id",
+                  "displayName": "Contractor ID",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(workorder_count)",
+                  "displayName": "Total Workorder Counts",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "se",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "12011ab9",
+                  "fields": [
+                    {
+                      "name": "project_code",
+                      "expression": "`project_code`"
+                    },
+                    {
+                      "name": "sum(erp_spend)",
+                      "expression": "SUM(`erp_spend`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Spend by Project"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "project_code",
+                  "displayName": "Project Code",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(erp_spend)",
+                  "displayName": "Total ERP Spend",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "7b16507a",
+      "displayName": "Network Health",
+      "layout": [
+        {
+          "widget": {
+            "name": "reading-type",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b111181573919741af03935c82_reading_type",
+                "query": {
+                  "datasetName": "0c375e43",
+                  "fields": [
+                    {
+                      "name": "reading_type",
+                      "expression": "`reading_type`"
+                    },
+                    {
+                      "name": "reading_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "READING TYPE"
+              },
+              "disallowAll": false,
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "pressure"
+                      }
+                    ]
+                  }
+                }
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "reading_type",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b111181573919741af03935c82_reading_type"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "zone",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b111181573919741af03935c82_zone",
+                "query": {
+                  "datasetName": "0c375e43",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "zone_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "ZONE"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "zone",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b111181573919741af03935c82_zone"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "eade74fb",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "0c375e43",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "daily(reading_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `reading_date`)"
+                    },
+                    {
+                      "name": "avg(avg_reading_value)",
+                      "expression": "AVG(`avg_reading_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Reading Trend Over Time"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(reading_date)",
+                  "displayName": "Reading Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "avg(avg_reading_value)",
+                  "displayName": "Average Reading Value",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "zone",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "reliabili",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6fe1b859",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "reliability_pct",
+                      "expression": "`reliability_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Network Reliability by Zone"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "zone",
+                  "displayName": "Zone",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "reliability_pct",
+                  "displayName": "Reliability %",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "unre",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "1db9826f",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "reading_date",
+                      "expression": "`reading_date`"
+                    },
+                    {
+                      "name": "reading_type",
+                      "expression": "`reading_type`"
+                    },
+                    {
+                      "name": "avg_reading_value",
+                      "expression": "`avg_reading_value`"
+                    },
+                    {
+                      "name": "reliability_pct",
+                      "expression": "`reliability_pct`"
+                    },
+                    {
+                      "name": "suspect_count",
+                      "expression": "`suspect_count`"
+                    },
+                    {
+                      "name": "zone_mismatch_count",
+                      "expression": "`zone_mismatch_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Unreliable Readings - Investigate"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "zone"
+                  },
+                  {
+                    "fieldName": "reading_date"
+                  },
+                  {
+                    "fieldName": "reading_type"
+                  },
+                  {
+                    "fieldName": "avg_reading_value"
+                  },
+                  {
+                    "fieldName": "reliability_pct"
+                  },
+                  {
+                    "fieldName": "suspect_count"
+                  },
+                  {
+                    "fieldName": "zone_mismatch_count"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "b6656287",
+      "displayName": "Executive View",
+      "layout": [
+        {
+          "widget": {
+            "name": "zone",
+            "queries": [
+              {
+                "name": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b1166e1a7f8e3af6c5706311a2_zone",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    },
+                    {
+                      "name": "zone_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "ZONE"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "zone",
+                    "queryName": "dashboards/01f198004598183dbb20211550bd709b/datasets/01f198b1166e1a7f8e3af6c5706311a2_zone"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total-consumption",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(total_consumption_m3)",
+                      "expression": "SUM(`total_consumption_m3`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Consumption"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_consumption_m3)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-bi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(total_billed)",
+                      "expression": "SUM(`total_billed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Billing"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_billed)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-erp-spend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(total_erp_spend)",
+                      "expression": "SUM(`total_erp_spend`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total ERP Spend"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_erp_spend)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "t1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(total_contractor_spend)",
+                      "expression": "SUM(`total_contractor_spend`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Contractor Spend"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_contractor_spend)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 7,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-work",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(total_workorder_count)",
+                      "expression": "SUM(`total_workorder_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Workorder Counts"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_workorder_count)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "network-reli",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f19191aa",
+                  "fields": [
+                    {
+                      "name": "sum(avg_reliability_pct)",
+                      "expression": "SUM(`avg_reliability_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Network Reliability"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(avg_reliability_pct)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 13,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#B8C9DC",
+        "dark": "#0D1117"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#161B22"
+      },
+      "widgetBorderColor": {
+        "light": "#E8EDF2",
+        "dark": "#30363D"
+      },
+      "selectionColor": {
+        "light": "#6366F1",
+        "dark": "#818CF8"
+      },
+      "visualizationColors": [
+        "#6366F1",
+        "#06B6D4",
+        "#10B981",
+        "#F59E0B",
+        "#F43F5E",
+        "#A855F7",
+        "#EC4899",
+        "#14B8A6"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "widgetPadding": 20,
+      "widgetMargin": 12,
+      "widgetCornerRadius": 16,
+      "widgetShadow": 20,
+      "fontSettings": {
+        "base": {
+          "fontFamily": "Space Grotesk",
+          "fontColor": {
+            "light": "#1A2332",
+            "dark": "#E6EDF3"
+          },
+          "fontSize": 14
+        },
+        "widgetTitle": {
+          "textCase": "TEXT_CASE_UNSPECIFIED",
+          "fontSize": 16,
+          "fontWeight": 600
+        },
+        "widgetDescription": {
+          "fontColor": {
+            "light": "#718096",
+            "dark": "#8B949E"
+          },
+          "fontSize": 12
+        },
+        "fieldTitle": {
+          "fontColor": {
+            "light": "#4A5568",
+            "dark": "#8B949E"
+          },
+          "fontSize": 13,
+          "fontWeight": 500
+        },
+        "fieldValue": {
+          "fontSize": 13
+        }
+      },
+      "gridLineColor": {
+        "light": "#EEF2F6",
+        "dark": "#21262D"
+      }
+    },
+    "applyModeEnabled": false
+  }
+}
